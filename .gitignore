@@ -1,0 +1,64 @@
+##############################
+# Archivos de compilación Java
+##############################
+*.class
+*.jar
+*.war
+*.ear
+
+# Carpetas de compilación
+/bin/
+/out/
+/build/
+
+##############################
+# Archivos temporales y logs
+##############################
+*.log
+*.tmp
+*.bak
+*.swp
+
+##############################
+# Configuración de IDEs
+##############################
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+*.nb-gradle/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# Visual Studio Code
+.vscode/
+
+##############################
+# Archivos del sistema
+##############################
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+##############################
+# Archivos de exportación del programa
+##############################
+/exports/
+*.csv
+*.txt

@@ -2,32 +2,26 @@
 setlocal
 
 echo ======================================
-echo  Compilando el proyecto Escáner de Red
+echo  Compilando Escaner de Red
 echo ======================================
 
 :: Crear carpeta bin si no existe
-if not exist bin (
-    mkdir bin
-)
+if not exist bin mkdir bin
 
-:: Compilar todos los archivos .java dentro de src/
-javac -d bin -sourcepath src src\app\MainApp.java
+:: Compilar todos los .java
+javac -d bin src/app/*.java src/ui/*.java src/utils/*.java
 
-:: Verificar si la compilación fue exitosa
 if %errorlevel% neq 0 (
-    echo Error durante la compilación.
+    echo Error en la compilacion.
+    pause
     exit /b %errorlevel%
 )
 
-echo.
 echo ======================================
-echo  Compilación exitosa. Ejecutando...
+echo  Compilacion exitosa - Ejecutando
 echo ======================================
 
-:: Ejecutar el programa
-cd bin
-java app.MainApp
-cd ..
+java -cp bin app.MainApp
 
 endlocal
 pause
