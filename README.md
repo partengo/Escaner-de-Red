@@ -12,6 +12,6 @@
 - Conexión de red local
 
 ## Cómo usar
-1. Ejecuta `MainApp.java`
+1. Ejecuta `APP.bat`
 2. Ingresa IP de inicio y fin
 3. Presiona "Escanear"
