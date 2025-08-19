@@ -5,6 +5,8 @@ echo ======================================
 echo  Compilando Escaner de Red
 echo ======================================
 
+cd ../
+
 :: Crear carpeta bin si no existe
 if not exist bin mkdir bin
 
