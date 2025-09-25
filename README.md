@@ -11,7 +11,9 @@
 - JDK 11+
 - Conexión de red local
 
-## Cómo usar
+## Cómo escanear la red
 1. Ejecuta `APP.bat`
 2. Ingresa IP de inicio y fin
 3. Presiona "Escanear"
+
+## Cómo escanear 

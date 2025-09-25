@@ -3,96 +3,174 @@ package app;
 import src.ui.ResultTableModel;
 import src.utils.IPUtils;
 import src.utils.FileExporter;
-import src.app.PingResult;
+import src.utils.NetstatUtils;
 import src.app.NetworkScanner;
-
+import src.app.PingResult;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.util.List;
 
 public class MainApp {
-    private JFrame frame;
-    private JTextField ipInicioField, ipFinField;
-    private JTable tablaResultados;
-    private JProgressBar barraProgreso;
-    private ResultTableModel tableModel;
-    private JButton botonEscanear, botonLimpiar, botonGuardar;
 
-    public MainApp() {
-        inicializarInterfaz();
-    }
+    private ResultTableModel tableModel;
+    private JProgressBar progressBar; // Barra de progreso
 
     private void inicializarInterfaz() {
-        frame = new JFrame("Escáner de Red");
-        frame.setSize(800, 600);
+        JFrame frame = new JFrame("Escáner de Red en Java");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLayout(new BorderLayout());
+        frame.setSize(1000, 600);
 
-        // Panel superior
-        JPanel panelSuperior = new JPanel(new GridLayout(3, 2));
-        ipInicioField = new JTextField("192.168.1.1");
-        ipFinField = new JTextField("192.168.1.10");
-        panelSuperior.add(new JLabel("IP de inicio:"));
-        panelSuperior.add(ipInicioField);
-        panelSuperior.add(new JLabel("IP de fin:"));
-        panelSuperior.add(ipFinField);
+        // --- Panel superior con controles ---
+        JPanel panelSuperior = new JPanel();
+        JTextField campoInicio = new JTextField(10);
+        JTextField campoFin = new JTextField(10);
+        JButton botonEscanear = new JButton("Escanear");
+        JButton botonGuardar = new JButton("Guardar resultados");
+        JButton botonNetstatA = new JButton("Ver Conexiones (-a)");
+        JButton botonNetstatN = new JButton("Ver Conexiones Numéricas (-n)");
 
-        botonEscanear = new JButton("Escanear");
-        botonLimpiar = new JButton("Limpiar");
+        panelSuperior.add(new JLabel("IP inicio:"));
+        panelSuperior.add(campoInicio);
+        panelSuperior.add(new JLabel("IP fin:"));
+        panelSuperior.add(campoFin);
         panelSuperior.add(botonEscanear);
-        panelSuperior.add(botonLimpiar);
-        frame.add(panelSuperior, BorderLayout.NORTH);
+        panelSuperior.add(botonGuardar);
+        panelSuperior.add(botonNetstatA);
+        panelSuperior.add(botonNetstatN);
 
-        // Tabla de resultados
+        // --- Barra de progreso ---
+        progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
+
+        // --- Tabla de resultados ---
         tableModel = new ResultTableModel();
-        tablaResultados = new JTable(tableModel);
-        frame.add(new JScrollPane(tablaResultados), BorderLayout.CENTER);
+        JTable tabla = new JTable(tableModel);
+        JScrollPane scrollPane = new JScrollPane(tabla);
 
-        // Barra de progreso y botón guardar
-        JPanel panelInferior = new JPanel(new BorderLayout());
-        barraProgreso = new JProgressBar();
-        panelInferior.add(barraProgreso, BorderLayout.CENTER);
+        frame.add(panelSuperior, BorderLayout.NORTH);
+        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.add(progressBar, BorderLayout.SOUTH);
 
-        botonGuardar = new JButton("Guardar resultados");
-        panelInferior.add(botonGuardar, BorderLayout.EAST);
+        // Acción Guardar
+        botonGuardar.addActionListener(e ->
+                FileExporter.exportarCSV(tableModel.getResultados())
+        );
 
-        frame.add(panelInferior, BorderLayout.SOUTH);
+        // Acción Escanear (con progreso)
+        botonEscanear.addActionListener(e -> {
+            String ipInicio = campoInicio.getText().trim();
+            String ipFin = campoFin.getText().trim();
 
-        // Acciones
-        botonEscanear.addActionListener(this::accionEscanear);
-        botonLimpiar.addActionListener(e -> tableModel.limpiar());
-        botonGuardar.addActionListener(e -> FileExporter.exportarCSV(tableModel.getResultados()));
+            if (!IPUtils.validarIP(ipInicio) || !IPUtils.validarIP(ipFin)) {
+                JOptionPane.showMessageDialog(frame, "Rango de IP inválido");
+                return;
+            }
+
+            List<String> rango = IPUtils.generarRango(ipInicio, ipFin);
+            progressBar.setValue(0);
+
+            // Usamos SwingWorker para no congelar la interfaz
+            SwingWorker<Void, Integer> worker = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() {
+                    int total = rango.size();
+                    int procesadas = 0;
+
+                    for (String ip : rango) {
+                        PingResult res = NetworkScanner.escanearIP(ip);
+                        tableModel.agregarResultado(res);
+
+                        procesadas++;
+                        int progreso = (int) ((procesadas / (double) total) * 100);
+                        publish(progreso);
+                    }
+                    return null;
+                }
+
+                @Override
+                protected void process(List<Integer> chunks) {
+                    progressBar.setValue(chunks.get(chunks.size() - 1));
+                }
+
+                @Override
+                protected void done() {
+                    JOptionPane.showMessageDialog(frame, "Escaneo finalizado.");
+                }
+            };
+            worker.execute();
+        });
+
+        // Acción Netstat -a
+        botonNetstatA.addActionListener(e -> {
+            JDialog dialogo = mostrarDialogoCargando(frame, "Analizando conexiones...");
+            SwingWorker<String, Void> worker = new SwingWorker<>() {
+                @Override
+                protected String doInBackground() {
+                    return NetstatUtils.mostrarConexiones(); // netstat -a
+                }
+
+                @Override
+                protected void done() {
+                    dialogo.dispose();
+                    try {
+                        String salida = get();
+                        JTextArea textArea = new JTextArea(salida, 20, 60);
+                        textArea.setEditable(false);
+                        JOptionPane.showMessageDialog(frame, new JScrollPane(textArea),
+                                "Resultado de netstat -a", JOptionPane.INFORMATION_MESSAGE);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
+                    }
+                }
+            };
+            worker.execute();
+        });
+
+        // Acción Netstat -n
+        botonNetstatN.addActionListener(e -> {
+            JDialog dialogo = mostrarDialogoCargando(frame, "Analizando conexiones numericas...");
+            SwingWorker<String, Void> worker = new SwingWorker<>() {
+                @Override
+                protected String doInBackground() {
+                    return NetstatUtils.mostrarConexionesNumericas(); // netstat -n
+                }
+
+                @Override
+                protected void done() {
+                    dialogo.dispose();
+                    try {
+                        String salida = get();
+                        JTextArea textArea = new JTextArea(salida, 20, 60);
+                        textArea.setEditable(false);
+                        JOptionPane.showMessageDialog(frame, new JScrollPane(textArea),
+                                "Resultado de netstat -n", JOptionPane.INFORMATION_MESSAGE);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
+                    }
+                }
+            };
+            worker.execute();
+        });
 
         frame.setVisible(true);
     }
 
-    private void accionEscanear(ActionEvent e) {
-        String ipInicio = ipInicioField.getText().trim();
-        String ipFin = ipFinField.getText().trim();
+    // --- Ventana de "Cargando..." ---
+    private JDialog mostrarDialogoCargando(JFrame frame, String mensaje) {
+        JDialog dialog = new JDialog(frame, "Cargando", true);
+        JLabel label = new JLabel(mensaje, SwingConstants.CENTER);
+        dialog.add(label);
+        dialog.setSize(300, 100);
+        dialog.setLocationRelativeTo(frame);
 
-        if (!IPUtils.validarIP(ipInicio) || !IPUtils.validarIP(ipFin)) {
-            JOptionPane.showMessageDialog(frame, "Las direcciones IP no son válidas.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        // Mostrar en otro hilo para no bloquear
+        SwingUtilities.invokeLater(() -> dialog.setVisible(true));
 
-        List<String> rango = IPUtils.generarRango(ipInicio, ipFin);
-        barraProgreso.setMaximum(rango.size());
-
-        tableModel.limpiar();
-
-        new Thread(() -> {
-            for (int i = 0; i < rango.size(); i++) {
-                String ip = rango.get(i);
-                PingResult res = NetworkScanner.escanearIP(ip);
-                tableModel.agregarResultado(res);
-                barraProgreso.setValue(i + 1);
-            }
-        }).start();
+        return dialog;
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(MainApp::new);
+        SwingUtilities.invokeLater(() -> new MainApp().inicializarInterfaz());
     }
 }
