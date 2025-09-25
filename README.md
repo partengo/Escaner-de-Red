@@ -15,5 +15,3 @@
 1. Ejecuta `APP.bat`
 2. Ingresa IP de inicio y fin
 3. Presiona "Escanear"
-
-## Cómo escanear 
