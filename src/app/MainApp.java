@@ -19,7 +19,7 @@ public class MainApp {
     private void inicializarInterfaz() {
         JFrame frame = new JFrame("Escáner de Red en Java");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(1000, 600);
+        frame.setSize(1300, 600);
 
         // --- Panel superior con controles ---
         JPanel panelSuperior = new JPanel();
@@ -29,7 +29,9 @@ public class MainApp {
         JButton botonGuardar = new JButton("Guardar resultados");
         JButton botonNetstatA = new JButton("Ver Conexiones (-a)");
         JButton botonNetstatN = new JButton("Ver Conexiones Numéricas (-n)");
+        JButton botonNetstatProc = new JButton("Ver Conexiones + PID");
 
+        panelSuperior.add(botonNetstatProc);
         panelSuperior.add(new JLabel("IP inicio:"));
         panelSuperior.add(campoInicio);
         panelSuperior.add(new JLabel("IP fin:"));
@@ -152,7 +154,31 @@ public class MainApp {
             };
             worker.execute();
         });
+        // Acción Netstat -o / -p
+        botonNetstatProc.addActionListener(e -> {
+            JDialog dialogo = mostrarDialogoCargando(frame, "Ejecutando netstat -o / -p...");
+            SwingWorker<String, Void> worker = new SwingWorker<>() {
+                @Override
+                protected String doInBackground() {
+                    return NetstatUtils.mostrarConexionesConProcesos();
+                }
 
+                @Override
+                protected void done() {
+                    dialogo.dispose();
+                    try {
+                        String salida = get();
+                        JTextArea textArea = new JTextArea(salida, 20, 60);
+                        textArea.setEditable(false);
+                        JOptionPane.showMessageDialog(frame, new JScrollPane(textArea),
+                                "Resultado de netstat con procesos", JOptionPane.INFORMATION_MESSAGE);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
+                    }
+                }
+            };
+            worker.execute();
+        });
         frame.setVisible(true);
     }
 

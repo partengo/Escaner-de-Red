@@ -34,4 +34,10 @@ public class NetstatUtils {
         String comando = so.contains("win") ? "netstat -n" : "netstat -an";
         return ejecutarComando(comando);
     }
+
+    public static String mostrarConexionesConProcesos() {
+        String so = System.getProperty("os.name").toLowerCase();
+        String comando = so.contains("win") ? "netstat -o" : "netstat -p";
+        return ejecutarComando(comando);
+    }
 }
